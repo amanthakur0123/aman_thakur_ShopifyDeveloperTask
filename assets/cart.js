@@ -1,12 +1,41 @@
 class CartRemoveButton extends HTMLElement {
   constructor() {
     super();
-
-    this.addEventListener('click', (event) => {
-      event.preventDefault();
-      const cartItems = this.closest('cart-items') || this.closest('cart-drawer-items');
-      cartItems.updateQuantity(this.dataset.index, 0);
-    });
+    const dataBundle = JSON.parse(this.dataset.bundle)
+    if (dataBundle.length) {
+      this.addEventListener('click', (event) => {
+        event.preventDefault();
+        const itemId = this.dataset.itemid
+        let updates = {};
+        updates[dataBundle[0]] = 0;
+        updates[dataBundle[1]] = 0;
+        updates[itemId] = 0;
+        fetch(window.Shopify.routes.root + 'cart/update.js?sections=cart-icon-bubble,main-cart-items', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ updates })
+        }).then(response => response.json())
+          .then(response => {
+            const mainCart = response.sections["main-cart-items"]
+            const countBubble = response.sections["cart-icon-bubble"]
+            var doc = new DOMParser().parseFromString(mainCart, 'text/html');
+            var bubble = new DOMParser().parseFromString(countBubble, 'text/html');
+            document.querySelector('cart-items').innerHTML = doc.querySelector("cart-items").innerHTML
+            document.querySelector(".totals__total-value").innerHTML = doc.querySelector(".main-cart-totals__total-value").innerHTML
+            document.querySelector(".cart-count-bubble").innerHTML = bubble.querySelector(".cart-count-bubble").innerHTML;
+          }).catch(error => {
+            console.log(error)
+          })
+      })
+    } else {
+      this.addEventListener('click', (event) => {
+        event.preventDefault();
+        const cartItems = this.closest('cart-items') || this.closest('cart-drawer-items');
+        cartItems.updateQuantity(this.dataset.index, 0);
+      });
+    }
   }
 }
 
@@ -17,11 +46,9 @@ class CartItems extends HTMLElement {
     super();
     this.lineItemStatusElement =
       document.getElementById('shopping-cart-line-item-status') || document.getElementById('CartDrawer-LineItemStatus');
-
     const debouncedOnChange = debounce((event) => {
       this.onChange(event);
     }, ON_CHANGE_DEBOUNCE_TIMER);
-
     this.addEventListener('change', debouncedOnChange.bind(this));
   }
 
@@ -43,12 +70,46 @@ class CartItems extends HTMLElement {
   }
 
   onChange(event) {
-    this.updateQuantity(
-      event.target.dataset.index,
-      event.target.value,
-      document.activeElement.getAttribute('name'),
-      event.target.dataset.quantityVariantId
-    );
+    const bundleItem = JSON.parse(event.target.dataset.bundle)
+    console.log(bundleItem)
+    if (bundleItem) {
+      this.updateQuantityBundle(event, bundleItem)
+    } else {
+      this.updateQuantity(
+        event.target.dataset.index,
+        event.target.value,
+        document.activeElement.getAttribute('name'),
+        event.target.dataset.quantityVariantId
+      );
+    }
+  }
+
+
+  updateQuantityBundle(event, dataBundle) {
+    const quantity = event.target.value
+    const mainItemId = event.target.dataset.quantityVariantId
+    let updates = {};
+    updates[dataBundle[0]] = quantity;
+    updates[dataBundle[1]] = quantity;
+    updates[mainItemId] = quantity;
+    fetch(window.Shopify.routes.root + 'cart/update.js?sections=cart-icon-bubble,main-cart-items', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ updates })
+    }).then(response => response.json())
+      .then(response => {
+        const mainCart = response.sections["main-cart-items"]
+        const countBubble = response.sections["cart-icon-bubble"]
+        var doc = new DOMParser().parseFromString(mainCart, 'text/html');
+        var bubble = new DOMParser().parseFromString(countBubble, 'text/html');
+        document.querySelector('cart-items').innerHTML = doc.querySelector("cart-items").innerHTML
+        document.querySelector(".totals__total-value").innerHTML = doc.querySelector(".main-cart-totals__total-value").innerHTML
+        document.querySelector(".cart-count-bubble").innerHTML = bubble.querySelector(".cart-count-bubble").innerHTML;
+      }).catch(error => {
+        console.log(error)
+      })
   }
 
   onCartUpdate() {

@@ -30,20 +30,52 @@ if (!customElements.get('product-form')) {
         config.headers['X-Requested-With'] = 'XMLHttpRequest';
         delete config.headers['Content-Type'];
 
+
+
+        const formData3 = {};
+
         const formData = new FormData(this.form);
+        // if (this.cart) {
+        //   formData.append(
+        //     'sections',
+        //     this.cart.getSectionsToRender().map((section) => section.id)
+        //   );
+        //   formData.append('sections_url', window.location.pathname);
+        //   this.cart.setActiveElement(document.activeElement);
+        // }
+
         if (this.cart) {
-          formData.append(
-            'sections',
-            this.cart.getSectionsToRender().map((section) => section.id)
-          );
-          formData.append('sections_url', window.location.pathname);
+          formData3.sections = this.cart.getSectionsToRender().map((section) => section.id)
+          formData3.sections_url = window.location.pathname;
           this.cart.setActiveElement(document.activeElement);
         }
-        config.body = formData;
+        const items = [];
+        const bundle = []
+        for (var pair of formData.entries()) {
+          if (pair[0] == "id" || pair[0].includes("bundleItem")) {
+            items.push({
+              id: pair[1],
+              quantity: 1,
+            })
+            if (pair[0].includes("bundle")) {
+              bundle.push(pair[1])
+              items[items.length - 1].properties = { _bundle_item: true }
+            }
+          }
+        }
+        items[0].properties = { _bundle: JSON.stringify(bundle) }
+        formData3.items = items
 
-        fetch(`${routes.cart_add_url}`, config)
+        fetch(window.Shopify.routes.root + 'cart/add.js', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(formData3)
+        })
           .then((response) => response.json())
           .then((response) => {
+            console.log(response)
             if (response.status) {
               publish(PUB_SUB_EVENTS.cartError, {
                 source: 'product-form',
@@ -65,6 +97,9 @@ if (!customElements.get('product-form')) {
               return;
             }
 
+            if (response.hasOwnProperty('items')) {
+              response = { ...response, ...response.items[0] }
+            }
             if (!this.error)
               publish(PUB_SUB_EVENTS.cartUpdate, {
                 source: 'product-form',
@@ -116,3 +151,16 @@ if (!customElements.get('product-form')) {
     }
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
