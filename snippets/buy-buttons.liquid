@@ -61,6 +61,17 @@
           class="product-variant-id"
         >
 
+        <div class="bundle-container" name="bundle-am" id="bundle-id-am">
+          {% for bundleId in product.selected_or_first_available_variant.metafields.custom.free_items.value %}
+            <input
+              type="hidden"
+              name="bundleItem-{{forloop.index}}"
+              value="{{ bundleId.id }}"
+              class="product-variant-id bundle-product"
+            >
+          {% endfor %}
+        </div>
+
         {%- if gift_card_recipient_feature_active -%}
           {%- render 'gift-card-recipient-form', product: product, form: form, section: section -%}
         {%- endif -%}

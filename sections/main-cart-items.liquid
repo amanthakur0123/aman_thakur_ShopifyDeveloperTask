@@ -25,7 +25,9 @@
 
 <script src="{{ 'quantity-popover.js' | asset_url }}" defer="defer"></script>
 
-<cart-items class="gradient color-{{ section.settings.color_scheme }} isolate{% if cart == empty %} is-empty{% else %} section-{{ section.id }}-padding{% endif %}">
+<cart-items
+  class="gradient color-{{ section.settings.color_scheme }} isolate{% if cart == empty %} is-empty{% else %} section-{{ section.id }}-padding{% endif %}"
+>
   <div class="page-width">
     <div class="title-wrapper-with-link">
       <h1 class="title title--primary">{{ 'sections.cart.title' | t }}</h1>
@@ -226,6 +228,7 @@
                     -%}
                     <td class="cart-item__quantity{% if has_qty_rules or has_vol_pricing %} cart-item__quantity--info{% endif %}">
                       <quantity-popover>
+                        {% assign myStyle = ' style="pointer-events: none" ' %}
                         <div class="cart-item__quantity-wrapper quantity-popover-wrapper">
                           <label class="visually-hidden" for="Quantity-{{ item.index | plus: 1 }}">
                             {{ 'products.product.quantity.label' | t }}
@@ -235,19 +238,68 @@
                               <button
                                 type="button"
                                 aria-expanded="false"
-                                class="quantity-popover__info-button quantity-popover__info-button--icon-only button button--tertiary small-hide medium-hide"
+                                class="
+                                  quantity-popover__info-button quantity-popover__info-button--icon-only button button--tertiary small-hide medium-hide
+                                  {% for  property in item.properties %}
+                                        {% if property.first contains '_bundle_item' and property.last  %}
+                                          disabled
+                                        {% endif %}
+                                       {% endfor %}
+                                "
+                                {% liquid
+                                  for property in item.properties
+                                    if property.first contains '_bundle_item' and property.last
+                                      echo myStyle
+                                    endif
+                                  endfor
+                                %}
                               >
                                 {% render 'icon-info' %}
                               </button>
                             {%- endif -%}
-                            <quantity-input class="quantity cart-quantity">
-                              <button class="quantity__button" name="minus" type="button">
+
+                            <quantity-input
+                              {% for property in item.properties %}
+                                {% if property.first contains '_bundle' %}
+                                  data-bundle="{{ property.last }}"
+                                {% endif %}
+                              {% endfor %}
+                              data-itemId="{{item.id}}"
+                              class="quantity cart-quantity"
+                            >
+                              <button
+                                class="
+                                  quantity__button
+                                  {% for  property in item.properties %}
+                                        {% if property.first contains '_bundle_item' and property.last  %}
+                                          disabled
+                                        {% endif %}
+                                       {% endfor %}
+                                "
+                                name="minus"
+                                type="button"
+                                {% liquid
+                                  for property in item.properties
+                                    if property.first contains '_bundle_item' and property.last
+                                      echo myStyle
+                                    endif
+                                  endfor
+                                %}
+                              >
                                 <span class="visually-hidden">
                                   {{- 'products.product.quantity.decrease' | t: product: item.product.title | escape -}}
                                 </span>
                                 {% render 'icon-minus' %}
                               </button>
                               <input
+                                {% for property in item.properties %}
+                                  {% if property.first contains '_bundle_item' and property.last %}
+                                    {% echo myStyle %}
+                                  {% endif %}
+                                  {% if property.first contains '_bundle' %}
+                                    data-bundle="{{ property.last }}"
+                                  {% endif %}
+                                {% endfor %}
                                 class="quantity__input"
                                 data-quantity-variant-id="{{ item.variant.id }}"
                                 type="number"
@@ -266,7 +318,25 @@
                                 id="Quantity-{{ item.index | plus: 1 }}"
                                 data-index="{{ item.index | plus: 1 }}"
                               >
-                              <button class="quantity__button" name="plus" type="button">
+                              <button
+                                class="
+                                  quantity__button
+                                  {% for  property in item.properties %}
+                                        {% if property.first contains '_bundle_item' and property.last  %}
+                                          disabled
+                                        {% endif %}
+                                       {% endfor %}
+                                "
+                                name="plus"
+                                type="button"
+                                {% liquid
+                                  for property in item.properties
+                                    if property.first contains '_bundle_item' and property.last
+                                      echo myStyle
+                                    endif
+                                  endfor
+                                %}
+                              >
                                 <span class="visually-hidden">
                                   {{- 'products.product.quantity.increase' | t: product: item.product.title | escape -}}
                                 </span>
@@ -275,12 +345,28 @@
                             </quantity-input>
                           </div>
                           <cart-remove-button
+                            {% for property in item.properties %}
+                              {% if property.first contains '_bundle_item' and property.last %}
+                                {% echo myStyle %}
+                              {% endif %}
+                              {% if property.first contains '_bundle' %}
+                                data-bundle="{{ property.last }}"
+                              {% endif %}
+                            {% endfor %}
                             id="Remove-{{ item.index | plus: 1 }}"
                             data-index="{{ item.index | plus: 1 }}"
+                            data-itemId="{{item.id}}"
                           >
                             <a
                               href="{{ item.url_to_remove }}"
-                              class="button button--tertiary"
+                              class="
+                                button button--tertiary
+                                {% for  property in item.properties %}
+                                      {% if property.first contains '_bundle_item' and property.last  %}
+                                        disabled
+                                      {% endif %}
+                                     {% endfor %}
+                              "
                               aria-label="{{ 'sections.cart.remove_title' | t: title: item.title }}"
                             >
                               {% render 'icon-remove' %}
@@ -435,6 +521,7 @@
             </table>
           {%- endif -%}
         </div>
+        <p class="visually-hidden main-cart-totals__total-value">{{ cart.total_price | money_with_currency }}</p>
       </div>
 
       <p class="visually-hidden" id="cart-live-region-text" aria-live="polite" role="status"></p>
